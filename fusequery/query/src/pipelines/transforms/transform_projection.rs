@@ -29,6 +29,8 @@ impl ProjectionTransform {
         output_schema: DataSchemaRef,
         exprs: Vec<Expression>,
     ) -> Result<Self> {
+        log::debug!("exprs:{:?}", exprs);
+        
         let executor = ExpressionExecutor::try_create(
             "projection executor",
             input_schema,

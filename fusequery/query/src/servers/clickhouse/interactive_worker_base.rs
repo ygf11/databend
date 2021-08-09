@@ -48,6 +48,7 @@ impl InteractiveWorkerBase {
 
         let plan = PlanParser::create(ctx.clone()).build_from_sql(query)?;
 
+        log::debug!("plan:{:?}", plan);
         match plan {
             PlanNode::InsertInto(insert) => Self::process_insert_query(insert, ch_ctx, ctx).await,
             _ => {
