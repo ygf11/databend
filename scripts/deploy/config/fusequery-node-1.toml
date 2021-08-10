@@ -2,7 +2,7 @@
 # fuse-query -c fusequery_config_spec.toml
 
 # Log level.
-log_level = "ERROR"
+log_level = "DEBUG"
 
 # FuseQuery rpc address.
 # For flight rpc.

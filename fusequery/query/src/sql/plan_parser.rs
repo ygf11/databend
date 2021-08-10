@@ -121,10 +121,10 @@ impl PlanParser {
             DfStatement::ShowCreateTable(v) => self.sql_show_create_table_to_plan(v),
 
             // TODO: support like and other filters in show queries
-            DfStatement::ShowTables(_) => self.build_from_sql(
+            DfStatement::ShowTables(v) => self.build_from_sql(
                 format!(
                     "SELECT name FROM system.tables where database = '{}' ORDER BY database, name",
-                    self.ctx.get_current_database()
+                    v.db_name.clone().unwrap_or(self.ctx.get_current_database())
                 )
                 .as_str(),
             ),

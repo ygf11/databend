@@ -18,7 +18,9 @@ use sqlparser::ast::SqlOption;
 use sqlparser::ast::Statement as SQLStatement;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DfShowTables;
+pub struct DfShowTables {
+    pub db_name: Option<String>
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DfShowDatabases;

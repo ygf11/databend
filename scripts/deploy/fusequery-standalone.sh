@@ -14,10 +14,10 @@ BIN=${1:-debug}
 echo 'Start FuseStore...'
 nohup target/${BIN}/fuse-store --single true &
 echo "Waiting on fuse-store 10 seconds..."
-python scripts/ci/wait_tcp.py --timeout 5 --port 9191
+python3 scripts/ci/wait_tcp.py --timeout 5 --port 9191
 
 
 echo 'Start FuseQuery...'
 nohup target/${BIN}/fuse-query -c scripts/deploy/config/fusequery-node-1.toml &
 echo "Waiting on fuse-query 10 seconds..."
-python scripts/ci/wait_tcp.py --timeout 5 --port 3307
+python3 scripts/ci/wait_tcp.py --timeout 5 --port 3307

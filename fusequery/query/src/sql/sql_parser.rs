@@ -150,10 +150,24 @@ impl<'a> DfParser<'a> {
                         self.parse_explain()
                     }
                     Keyword::SHOW => {
+                        log::debug!("show first");
                         self.parser.next_token();
 
                         if self.consume_token("TABLES") {
-                            Ok(DfStatement::ShowTables(DfShowTables))
+                            // self.parser.next_token();
+                            // let token = self.parser.peek_token();
+
+                            let db_name = if self.parser.parse_keyword(Keyword::FROM) {
+                                let db_name = self.parser.peek_token().to_string();
+                                self.parser.next_token();
+
+                                Some(db_name)
+                            }else {
+                                None 
+                            };
+
+                            log::debug!("db name:{:?}", db_name);
+                            Ok(DfStatement::ShowTables(DfShowTables{db_name}))
                         } else if self.consume_token("DATABASES") {
                             Ok(DfStatement::ShowDatabases(DfShowDatabases))
                         } else if self.consume_token("SETTINGS") {
@@ -182,7 +196,8 @@ impl<'a> DfParser<'a> {
                     }
                 }
             }
-            _ => {
+            a => {
+                log::debug!("show second, {:?}", a);
                 // use the native parser
                 Ok(DfStatement::Statement(self.parser.parse_statement()?))
             }
