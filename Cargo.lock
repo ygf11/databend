@@ -1298,6 +1298,7 @@ dependencies = [
  "common-datavalues",
  "common-exception",
  "common-io",
+ "common-tracing",
  "dyn-clone",
  "float-cmp 0.9.0",
  "indexmap",

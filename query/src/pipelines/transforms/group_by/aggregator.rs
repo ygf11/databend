@@ -27,6 +27,7 @@ use common_io::prelude::BytesMut;
 use common_streams::DataBlockStream;
 use common_streams::SendableDataBlockStream;
 use futures::StreamExt;
+use common_tracing::tracing;
 
 use crate::pipelines::transforms::group_by::aggregator_keys_builder::KeysArrayBuilder;
 use crate::pipelines::transforms::group_by::aggregator_params::AggregatorParams;
@@ -79,7 +80,9 @@ impl<Method: HashMethod + PolymorphicKeysHelper<Method>> Aggregator<Method> {
                     let group_columns = Self::group_columns(&group_cols, &block)?;
                     let group_keys = hash_method.build_keys(&group_columns, block.num_rows())?;
 
+                    tracing::debug!("group keys:{:?}", group_keys);
                     let places = self.lookup_state(group_keys, &mut state);
+                    tracing::debug!("before execute");
                     Self::execute(aggregator_params, &block, &places)?;
                 }
             }
@@ -104,6 +107,7 @@ impl<Method: HashMethod + PolymorphicKeysHelper<Method>> Aggregator<Method> {
             let function = &aggregate_functions[index];
             let state_offset = offsets_aggregate_states[index];
             let function_arguments = &aggr_arg_columns_slice[index];
+            tracing::debug!("before accumulate keys, places:, state_offset:{:?}, row:{:?}", state_offset, rows);
             function.accumulate_keys(places, state_offset, function_arguments, rows)?;
         }
 

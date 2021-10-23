@@ -20,6 +20,7 @@ use common_datavalues::DataValue;
 use common_exception::ErrorCode;
 use common_exception::Result;
 use lazy_static::lazy_static;
+use common_tracing::tracing;
 
 use crate::aggregates::AggregateFunctionRef;
 use crate::aggregates::Aggregators;
@@ -120,6 +121,7 @@ impl AggregateFunctionFactory {
 
         let aggregate_functions_map = &self.case_insensitive_desc;
         if let Some(desc) = aggregate_functions_map.get(&lowercase_name) {
+            tracing::debug!("when create aggr function, nested_name: {}, params: {:?}, arguments:{:?}", origin, params, arguments);
             return (desc.aggregate_function_creator)(origin, params, arguments);
         }
 
@@ -133,6 +135,7 @@ impl AggregateFunctionFactory {
                         break;
                     }
                     Some(nested_desc) => {
+                        tracing::debug!("when create aggr function, nested_name: {}, params: {:?}, arguments:{:?}", nested_name, params, arguments);
                         return (desc.creator)(
                             nested_name,
                             params,

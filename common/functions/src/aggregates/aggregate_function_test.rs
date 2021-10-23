@@ -487,3 +487,10 @@ fn test_covariance_with_comparable_data_sets() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test() {
+    let series = Series::new(vec!["a", "b", "c", "d"]);
+    let str_array: &DFStringArray = series.static_cast();
+    str_array.into_iter().for_each(|v| println!("{:?}", v));
+}

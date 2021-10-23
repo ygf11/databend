@@ -22,6 +22,7 @@ use common_datavalues::prelude::*;
 use common_exception::ErrorCode;
 use common_exception::Result;
 use common_io::prelude::*;
+use common_tracing::tracing;
 
 use super::StateAddr;
 use crate::aggregates::aggregate_function_factory::AggregateFunctionDescription;
@@ -103,6 +104,11 @@ where
         _rows: usize,
         is_min: bool,
     ) -> Result<()> {
+        tracing::debug!(
+            "in(numberic) argMin/argMax add keys, data_serials:{:?}, series:{:?}",
+            data_series,
+            series
+        );
         let array: &DFPrimitiveArray<T> = series.static_cast();
         array
             .into_iter()
@@ -198,11 +204,30 @@ impl AggregateArgMinMaxState for StringState {
         _rows: usize,
         is_min: bool,
     ) -> Result<()> {
-        let array: &DFStringArray = data_series.static_cast();
+        tracing::debug!(
+            "in(string) argMin/argMax add keys, data_serials:{:?}, series:{:?}",
+            data_series,
+            _series
+        );
+        let array: &DFStringArray = _series.static_cast();
+        tracing::debug!(
+            "in(string) argMin/argMax add keys after static cast, data_serials:{:?}, series:{:?}",
+            data_series,
+            _series
+        );
+
+        // array.into_value();
+        array.into_iter().for_each(|v| tracing::debug!("{:?}", v));
+
         array
             .into_iter()
             .zip(places.iter().enumerate())
             .try_for_each(|(key, (idx, addr))| -> Result<()> {
+                tracing::debug!(
+                    "in(string) argMin/argMax add keys in for each, data_serials:{:?}, series:{:?}",
+                    data_series,
+                    _series
+                );
                 let data = data_series.try_get(idx)?;
 
                 let place = addr.next(offset);
@@ -210,6 +235,7 @@ impl AggregateArgMinMaxState for StringState {
                 if let Some(v) = key {
                     state.merge_value(data, v, is_min);
                 }
+
                 Ok(())
             })
     }
@@ -302,6 +328,12 @@ where T: AggregateArgMinMaxState //  std::cmp::PartialOrd + DFTryFrom<DataValue>
         arrays: &[Series],
         input_rows: usize,
     ) -> Result<()> {
+        tracing::debug!(
+            "in accumulate keys, before add keys, offset:{:?}, arrays:{:?}, input_rows:{:?}",
+            offset,
+            arrays,
+            input_rows
+        );
         T::add_keys(
             places,
             offset,

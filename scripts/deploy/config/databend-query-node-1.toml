@@ -31,7 +31,7 @@ namespace = "test_cluster"
 
 # Log
 [log]
-log_level = "ERROR"
+log_level = "DEBUG"
 log_dir = "./_logs"
 
 # Meta service.

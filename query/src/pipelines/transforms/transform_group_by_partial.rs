@@ -76,8 +76,11 @@ impl GroupByPartialTransform {
         let schema = self.schema_before_group_by.clone();
         let aggregator_params = AggregatorParams::try_create(schema, aggr_exprs)?;
 
+        tracing::debug!("u64 hash method, group cols:{:?}, aggr_exprs:{:?}", group_cols, aggr_exprs);
+
         let aggregator = Aggregator::create(method, aggregator_params);
         let state = aggregator.aggregate(group_cols, stream).await?;
+
 
         let delta = start.elapsed();
         tracing::debug!("Group by partial cost: {:?}", delta);
