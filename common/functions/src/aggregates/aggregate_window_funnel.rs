@@ -230,6 +230,7 @@ where
         Ok(())
     }
 
+    // group by condition
     fn accumulate_keys(
         &self,
         places: &[StateAddr],
@@ -242,6 +243,7 @@ where
             let darray = arrays[i + 1].bool()?.inner();
             darrays.push(darray);
         }
+        // 相比没有group by 的情况, place需要多zip一次 
         let tarray: &DFPrimitiveArray<T> = arrays[0].static_cast();
         for ((row, timestmap), place) in tarray.into_iter().enumerate().zip(places.iter()) {
             if let Some(timestmap) = timestmap {
@@ -351,6 +353,8 @@ where
                 }
             }
         }
+
+        tracing::debug!("finnal events_timestamp: {:?}", events_timestamp);
 
         for i in (0..self.event_size).rev() {
             if events_timestamp[i].is_some() {
