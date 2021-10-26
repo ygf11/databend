@@ -25,6 +25,7 @@ use common_exception::ErrorCode;
 use common_exception::Result;
 use common_io::prelude::*;
 use num::traits::AsPrimitive;
+use common_tracing::tracing;
 
 use super::AggregateFunctionRef;
 use super::StateAddr;
@@ -59,6 +60,7 @@ where T: Ord
     }
     #[inline(always)]
     fn add(&mut self, timestamp: T, event: u8) {
+        tracing::debug!("self.sorted:{:?}", self.sorted);
         if self.sorted && !self.events_list.is_empty() {
             let last = self.events_list.last().unwrap();
             if last.0 == timestamp {
@@ -204,18 +206,22 @@ where
     }
 
     fn accumulate(&self, place: StateAddr, arrays: &[Series], _input_rows: usize) -> Result<()> {
+        tracing::debug!("arrays:{:?}, event_size:{:?}", arrays, self.event_size);
         let mut darrays = Vec::with_capacity(self.event_size);
         for i in 0..self.event_size {
             let darray = arrays[i + 1].bool()?.inner();
             darrays.push(darray);
         }
 
+        // timestamp
         let tarray: &DFPrimitiveArray<T> = arrays[0].static_cast();
         let state = place.get::<AggregateWindowFunnelState<T>>();
         for (row, timestmap) in tarray.into_iter().enumerate() {
             if let Some(timestmap) = timestmap {
                 for (i, arr) in darrays.iter().enumerate().take(self.event_size) {
+                    // tracing::debug!("row:{:?}, timestmap:{:?}, i:{:?}, arr:{:?}", row, timestmap, i, arr);
                     if arr.value(row) {
+                        tracing::debug!("inner row:{:?}, timestmap:{:?}, i:{:?}, arr:{:?}", row, timestmap, i, arr);
                         state.add(*timestmap, (i + 1) as u8);
                     }
                 }
@@ -324,11 +330,15 @@ where
 
         state.sort();
 
+        // events_timestamp => None None None
         let mut events_timestamp: Vec<Option<T>> = Vec::with_capacity(self.event_size);
         for _i in 0..self.event_size {
             events_timestamp.push(None);
         }
+
         for (timestamp, event) in state.events_list.iter() {
+            tracing::debug!("in get event level, timestamp:{:?}, event:{:?}", timestamp, event);
+            // event_idx是事件编号，比如(event1,event2,event3) 则event1的event_idx为0 
             let event_idx = (event - 1) as usize;
 
             if event_idx == 0 {

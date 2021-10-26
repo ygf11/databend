@@ -114,6 +114,7 @@ impl Processor for AggregatorPartialTransform {
         while let Some(block) = stream.next().await {
             let block = block?;
             let rows = block.num_rows();
+            tracing::debug!("while loop, rows:{:?}, block: {:?}", rows, block);
 
             for (idx, func) in funcs.iter().enumerate() {
                 let mut arg_columns = vec![];
