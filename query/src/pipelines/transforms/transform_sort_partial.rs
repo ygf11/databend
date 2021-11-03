@@ -28,11 +28,12 @@ use common_tracing::tracing;
 use crate::pipelines::processors::EmptyProcessor;
 use crate::pipelines::processors::Processor;
 
+// 对单个block进行排序
 pub struct SortPartialTransform {
     schema: DataSchemaRef,
     exprs: Vec<Expression>,
     limit: Option<usize>,
-    input: Arc<dyn Processor>,
+    input: Arc<dyn Processor>, // 输入
 }
 
 impl SortPartialTransform {

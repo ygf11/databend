@@ -28,6 +28,7 @@ use tokio_stream::StreamExt;
 use crate::pipelines::processors::Processor;
 use crate::sessions::DatabendQueryContextRef;
 
+// 多个输入，最后变成一个输出
 pub struct MergeProcessor {
     ctx: DatabendQueryContextRef,
     inputs: Vec<Arc<dyn Processor>>,
@@ -42,6 +43,7 @@ impl MergeProcessor {
     }
 
     pub fn merge(&self) -> Result<SendableDataBlockStream> {
+        // 输入个数
         let len = self.inputs.len();
         if len == 0 {
             return Result::Err(ErrorCode::IllegalTransformConnectionState(

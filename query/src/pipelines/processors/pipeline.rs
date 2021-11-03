@@ -138,6 +138,7 @@ impl Pipeline {
         }
 
         let mut processor = MixedProcessor::create(self.ctx.clone(), n);
+        // lastProcessor->mixedProcessor 连接
         for x in last_pipe.processors() {
             processor.connect_to(x)?;
         }

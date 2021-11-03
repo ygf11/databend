@@ -29,10 +29,11 @@ async fn transform_source_test() -> Result<()> {
     let mut pipeline = Pipeline::create(ctx);
 
     let a = test_source.number_source_transform_for_test(1)?;
+    // 添加数据源 a
     pipeline.add_source(Arc::new(a))?;
 
     let b = test_source.number_source_transform_for_test(1)?;
-
+    // 添加数据源 b
     pipeline.add_source(Arc::new(b))?;
     pipeline.merge_processor()?;
 

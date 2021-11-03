@@ -33,10 +33,12 @@ use crate::pipelines::processors::processor_merge::MergeProcessor;
 use crate::pipelines::processors::Processor;
 use crate::sessions::DatabendQueryContextRef;
 
+// 实际数据只要拉取一次就好了
+// 所以做法是拉取一次，但是输出多次，需要控制并发
 // M inputs--> N outputs Mixed processor
 struct MixedWorker {
     ctx: DatabendQueryContextRef,
-    n: usize,
+    n: usize, // output个数
     shared_num: AtomicUsize,
     started: AtomicBool,
     receivers: Vec<Option<mpsc::Receiver<Result<DataBlock>>>>,
@@ -49,7 +51,9 @@ impl MixedWorker {
             return Ok(());
         }
 
+        // 1
         let inputs_len = self.merger.inputs().len();
+        // 4
         let outputs_len = self.n;
 
         let mut senders = Vec::with_capacity(outputs_len);

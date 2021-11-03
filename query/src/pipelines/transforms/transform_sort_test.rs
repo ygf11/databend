@@ -39,6 +39,7 @@ async fn test_transform_sort() -> Result<()> {
         .sort(sort_expression)?
         .build()?;
 
+    //  添加sort partial 的transform
     pipeline.add_simple_transform(|| {
         Ok(Box::new(SortPartialTransform::try_create(
             plan.schema(),
@@ -47,6 +48,7 @@ async fn test_transform_sort() -> Result<()> {
         )?))
     })?;
 
+    // 添加 sort merge 的tranform
     pipeline.add_simple_transform(|| {
         Ok(Box::new(SortMergeTransform::try_create(
             plan.schema(),
@@ -55,7 +57,10 @@ async fn test_transform_sort() -> Result<()> {
         )?))
     })?;
 
+    println!("len:{:?}", pipeline.nums());
+
     if pipeline.last_pipe()?.nums() > 1 {
+        println!("len:{:?}", pipeline.nums());
         pipeline.merge_processor()?;
         pipeline.add_simple_transform(|| {
             Ok(Box::new(SortMergeTransform::try_create(

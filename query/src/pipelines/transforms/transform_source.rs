@@ -40,6 +40,7 @@ impl SourceTransform {
         Ok(SourceTransform { ctx, source_plan })
     }
 
+    // 从表里面读数据
     async fn read_table(&self) -> Result<SendableDataBlockStream> {
         let table_id = self.source_plan.table_info.table_id;
         let table_ver = self.source_plan.table_info.version;
@@ -85,6 +86,7 @@ impl Processor for SourceTransform {
         self
     }
 
+    // 从表中读取数据
     async fn execute(&self) -> Result<SendableDataBlockStream> {
         let db = self.source_plan.table_info.db.clone();
         let table = self.source_plan.table_info.name.clone();

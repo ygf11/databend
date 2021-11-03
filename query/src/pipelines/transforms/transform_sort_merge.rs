@@ -34,7 +34,7 @@ pub struct SortMergeTransform {
     schema: DataSchemaRef,
     exprs: Vec<Expression>,
     limit: Option<usize>,
-    input: Arc<dyn Processor>,
+    input: Arc<dyn Processor>, // input 
 }
 
 impl SortMergeTransform {

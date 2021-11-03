@@ -24,12 +24,17 @@ use crate::tests;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_processor_mixed() -> Result<()> {
+    // context
     let ctx = crate::tests::try_create_context()?;
+    // data source
     let test_source = tests::NumberTestData::create(ctx.clone());
 
+    // 创建一个pipeline
     let mut pipeline = Pipeline::create(ctx.clone());
 
+    // 数据源
     let source = test_source.number_source_transform_for_test(6)?;
+    // 添加数据源
     pipeline.add_source(Arc::new(source))?;
     pipeline.mixed_processor(4)?;
 
