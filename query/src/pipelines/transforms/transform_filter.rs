@@ -105,6 +105,13 @@ impl<const HAVING: bool> Processor for FilterTransform<HAVING> {
         let input_stream = self.input.execute().await?;
         let executor = self.executor.clone();
 
+        // let stream: Map<Pin<Box<dyn Stream<Item = Result<DataBlock, ErrorCode>> + Send, Global>>, |Result<DataBlock, ErrorCode>| -> Option<Result<DataBlock, ErrorCode>>>
+       
+       
+       
+       
+       
+       
         let stream = input_stream.filter_map(move |data_block| match data_block {
             Ok(data_block) if data_block.is_empty() => None,
             Err(fail) => Some(Err(fail)),

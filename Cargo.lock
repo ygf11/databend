@@ -1515,6 +1515,7 @@ dependencies = [
  "common-functions",
  "common-infallible",
  "common-meta-types",
+ "common-streams",
  "futures",
  "lazy_static",
  "pretty_assertions",

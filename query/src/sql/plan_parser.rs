@@ -93,7 +93,7 @@ impl PlanParser {
     }
 
     pub fn build_from_sql(&self, query: &str) -> Result<PlanNode> {
-        tracing::debug!(query);
+        tracing::debug!("build from sql:{}", query);
         DfParser::parse_sql(query).and_then(|(stmts, _)| {
             stmts
                 .first()
@@ -105,11 +105,15 @@ impl PlanParser {
     }
 
     pub fn build_with_hint_from_sql(&self, query: &str) -> (Result<PlanNode>, Vec<DfHint>) {
-        tracing::debug!(query);
+        tracing::debug!("build with hint from sql, query:{}", query);
         let stmt_hints = DfParser::parse_sql(query);
+        tracing::debug!("stmt_hints:{:?}", stmt_hints);
         match stmt_hints {
             Ok((stmts, hints)) => match stmts.first() {
-                Some(stmt) => (self.statement_to_plan(stmt), hints),
+                Some(stmt) => {
+                    tracing::debug!("first stmt:{:?}", stmt);
+                    (self.statement_to_plan(stmt), hints)
+                }
                 None => (
                     Result::Err(ErrorCode::SyntaxException("Only support single query")),
                     vec![],
@@ -419,6 +423,7 @@ impl PlanParser {
         Ok(PlanNode::TruncateTable(TruncateTablePlan { db, table }))
     }
 
+    // insertInto ---> Plan
     #[tracing::instrument(level = "info", skip(self, table_name, columns, source), fields(ctx.id = self.ctx.get_id().as_str()))]
     fn insert_to_plan(
         &self,
@@ -449,10 +454,16 @@ impl PlanParser {
         }
 
         let mut input_stream = futures::stream::iter::<Vec<DataBlock>>(vec![]);
+        let mut select_plan = None;
 
+        // 解析了 values
+        tracing::debug!("1111111 source:{:?}", source);
         if let Some(source) = source {
+            // 需要重写
+            // 1. values
+            // 2. select
             if let sqlparser::ast::SetExpr::Values(_vs) = &source.body {
-                tracing::debug!("{:?}", format_sql);
+                tracing::debug!("in values{:?}", format_sql);
                 let index = format_sql.find_substring(" VALUES ").unwrap();
                 let values = &format_sql[index + " VALUES ".len()..];
 
@@ -467,6 +478,9 @@ impl PlanParser {
                     }
                 }
                 input_stream = futures::stream::iter(blocks);
+            } else if let sqlparser::ast::SetExpr::Select(_) = &source.body{
+                tracing::debug!("in source is query{:?}", source);
+                select_plan = Some(Box::new(self.query_to_plan(source)?));
             }
         }
 
@@ -475,6 +489,8 @@ impl PlanParser {
             tbl_name,
             tbl_id,
             schema,
+            select_plan,
+            select_input_stream: Arc::new(Mutex::new(None)),
             input_stream: Arc::new(Mutex::new(Some(Box::pin(input_stream)))),
         };
         Ok(PlanNode::InsertInto(plan_node))

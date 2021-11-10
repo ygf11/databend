@@ -244,13 +244,14 @@ impl<W: std::io::Write> InteractiveWorkerBase<W> {
     fn do_close(&mut self, _: u32) {}
 
     async fn do_query(&mut self, query: &str) -> Result<(Vec<DataBlock>, String)> {
-        log::debug!("{}", query);
+        log::debug!("mysql do query:{}", query);
 
         let context = self.session.create_context().await?;
         context.attach_query_str(query);
 
         let query_parser = PlanParser::create(context.clone());
         let (plan, hints) = query_parser.build_with_hint_from_sql(query);
+        log::debug!("mysql do query, plan:{:?}", plan);
 
         match hints
             .iter()

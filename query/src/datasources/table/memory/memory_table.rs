@@ -122,6 +122,7 @@ impl Table for MemoryTable {
         )?))
     }
 
+    // memory table insert 数据实现
     async fn append_data(
         &self,
         _io_ctx: Arc<TableIOContext>,
@@ -133,6 +134,7 @@ impl Table for MemoryTable {
         }
         .ok_or_else(|| ErrorCode::EmptyData("input stream consumed"))?;
 
+        // 当前只支持全列插入
         if _insert_plan.schema().as_ref().fields() != self.table_info.schema.as_ref().fields() {
             return Err(ErrorCode::BadArguments("DataBlock schema mismatch"));
         }
@@ -141,6 +143,20 @@ impl Table for MemoryTable {
             let mut blocks = self.blocks.write();
             blocks.push(block);
         }
+
+        let select_input_stream = {
+            let mut inner = _insert_plan.select_input_stream.lock();
+            (*inner).take()
+        };
+
+        if let Some(mut stream) = select_input_stream {
+            while let Some(block) = stream.next().await {
+                let block = block?;
+                let mut blocks = self.blocks.write();
+                blocks.push(block);
+            }
+        }
+
         Ok(())
     }
 

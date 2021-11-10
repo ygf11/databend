@@ -18,6 +18,9 @@ use common_datablocks::DataBlock;
 use common_datavalues::DataSchemaRef;
 use common_infallible::Mutex;
 use common_meta_types::MetaId;
+use common_streams::SendableDataBlockStream;
+
+use crate::PlanNode;
 
 type BlockStream =
     std::pin::Pin<Box<dyn futures::stream::Stream<Item = DataBlock> + Sync + Send + 'static>>;
@@ -28,6 +31,10 @@ pub struct InsertIntoPlan {
     pub tbl_name: String,
     pub tbl_id: MetaId,
     pub schema: DataSchemaRef,
+    pub select_plan: Option<Box<PlanNode>>,
+
+    #[serde(skip, default = "InsertIntoPlan::empty_select_stream")]
+    pub select_input_stream: Arc<Mutex<Option<SendableDataBlockStream>>>,
 
     #[serde(skip, default = "InsertIntoPlan::empty_stream")]
     pub input_stream: Arc<Mutex<Option<BlockStream>>>,
@@ -43,6 +50,9 @@ impl PartialEq for InsertIntoPlan {
 
 impl InsertIntoPlan {
     pub fn empty_stream() -> Arc<Mutex<Option<BlockStream>>> {
+        Arc::new(Mutex::new(None))
+    }
+    pub fn empty_select_stream() -> Arc<Mutex<Option<SendableDataBlockStream>>> {
         Arc::new(Mutex::new(None))
     }
     pub fn schema(&self) -> DataSchemaRef {

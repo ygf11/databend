@@ -59,12 +59,14 @@ impl InteractiveWorkerBase {
         session: SessionRef,
     ) -> Result<Receiver<BlockItem>> {
         let query = &ch_ctx.state.query;
-        log::debug!("{}", query);
+        log::debug!("do query:{}", query);
 
         let ctx = session.create_context().await?;
         ctx.attach_query_str(query);
 
         let plan = PlanParser::create(ctx.clone()).build_from_sql(query)?;
+
+        log::debug!("plan:{:?}", plan);
 
         match plan {
             PlanNode::InsertInto(insert) => Self::process_insert_query(insert, ch_ctx, ctx).await,
@@ -113,6 +115,13 @@ impl InteractiveWorkerBase {
         ch_ctx: &mut CHContext,
         ctx: DatabendQueryContextRef,
     ) -> Result<Receiver<BlockItem>> {
+        log::debug!(
+            "db_name:{:?}, table_name:{:?}, table_id:{:?}, schema:{:?}",
+            insert.db_name,
+            insert.tbl_name,
+            insert.tbl_id,
+            insert.schema
+        );
         let sample_block = DataBlock::empty_with_schema(insert.schema());
         let (sender, rec) = channel(4);
         ch_ctx.state.out = Some(sender);
