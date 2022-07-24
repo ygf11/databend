@@ -33,6 +33,7 @@ impl<T: ArgType> ValueType for ArrayType<T> {
     type ScalarRef<'a> = T::Column;
     type Column = (T::Column, Buffer<u64>);
     type Domain = T::Domain;
+    type ExtCapacity = ();
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar
@@ -121,8 +122,24 @@ impl<T: ArgType> ArgType for ArrayType<T> {
         }
     }
 
-    fn create_builder(_capacity: usize, generics: &GenericMap) -> Self::ColumnBuilder {
-        (T::create_builder(0, generics), vec![0])
+    fn create_builder(
+        capacity: usize,
+        generics: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        (
+            T::create_ext_builder((0, T::ExtCapacity::default()), generics),
+            vec![0],
+        )
+    }
+
+    fn create_ext_builder(
+        _capacity: (usize, Self::ExtCapacity),
+        generics: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        (
+            T::create_ext_builder((0, T::ExtCapacity::default()), generics),
+            vec![0],
+        )
     }
 
     fn column_to_builder((col, offsets): Self::Column) -> Self::ColumnBuilder {

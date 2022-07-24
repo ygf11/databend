@@ -32,6 +32,7 @@ impl<const INDEX: usize> ValueType for GenericType<INDEX> {
     type ScalarRef<'a> = ScalarRef<'a>;
     type Column = Column;
     type Domain = Domain;
+    type ExtCapacity = ();
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar.to_owned()
@@ -96,6 +97,10 @@ impl<const INDEX: usize> ArgType for GenericType<INDEX> {
 
     fn create_builder(capacity: usize, generics: &GenericMap) -> Self::ColumnBuilder {
         ColumnBuilder::with_capacity(&generics[INDEX], capacity)
+    }
+
+    fn create_ext_builder(capacity: (usize, Self::ExtCapacity), generics: &GenericMap) -> Self::ColumnBuilder {
+        ColumnBuilder::with_capacity(&generics[INDEX], capacity.0)
     }
 
     fn column_to_builder(col: Self::Column) -> Self::ColumnBuilder {

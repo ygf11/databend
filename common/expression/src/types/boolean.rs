@@ -34,6 +34,7 @@ impl ValueType for BooleanType {
     type ScalarRef<'a> = bool;
     type Column = Bitmap;
     type Domain = BooleanDomain;
+    type ExtCapacity = ();
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar
@@ -111,6 +112,13 @@ impl ArgType for BooleanType {
 
     fn create_builder(capacity: usize, _: &GenericMap) -> Self::ColumnBuilder {
         MutableBitmap::with_capacity(capacity)
+    }
+
+    fn create_ext_builder(
+        capacity: (usize, Self::ExtCapacity),
+        _: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        MutableBitmap::with_capacity(capacity.0)
     }
 
     fn column_to_builder(col: Self::Column) -> Self::ColumnBuilder {

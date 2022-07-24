@@ -52,6 +52,7 @@ impl<Int: Number> ValueType for NumberType<Int> {
     type ScalarRef<'a> = Int::Storage;
     type Column = Buffer<Int::Storage>;
     type Domain = Int::Domain;
+    type ExtCapacity = ();
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar
@@ -120,6 +121,13 @@ impl<T: Number> ArgType for NumberType<T> {
 
     fn create_builder(capacity: usize, _generics: &GenericMap) -> Self::ColumnBuilder {
         Vec::with_capacity(capacity)
+    }
+
+    fn create_ext_builder(
+        capacity: (usize, Self::ExtCapacity),
+        _generics: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        Vec::with_capacity(capacity.0)
     }
 
     fn column_to_builder(col: Self::Column) -> Self::ColumnBuilder {

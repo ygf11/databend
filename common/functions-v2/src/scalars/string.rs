@@ -40,4 +40,24 @@ pub fn register(registry: &mut FunctionRegistry) {
         },
     );
     registry.register_aliases("upper", &["ucase"]);
+
+    registry.register_with_wise_writer_1_arg::<StringType, StringType, _, _, _, _>(
+        "to_base64",
+        FunctionProperty::default(),
+        |_| None,
+        |val, buf| Ok(base64::encode_config_slice(val, base64::STANDARD, buf)),
+        |data| data.len() * 4 / 3 + 4,
+        |(data, offsets)| data.len() * 4 / 3 + (offsets.len() - 1) * 4,
+    );
+
+    registry.register_with_wise_writer_1_arg::<StringType, StringType, _, _, _, _>(
+        "from_base64",
+        FunctionProperty::default(),
+        |_| None,
+        |val, buf| {
+            base64::decode_config_slice(val, base64::STANDARD, buf).map_err(|e| e.to_string())
+        },
+        |data| data.len() * 4 / 3 + 4,
+        |(data, offsets)| data.len() * 4 / 3 + (offsets.len() - 1) * 4,
+    );
 }

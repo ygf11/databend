@@ -75,6 +75,7 @@ pub trait ValueType: Sized + 'static {
     type ScalarRef<'a>: Debug + Clone;
     type Column: Debug + Clone;
     type Domain: Debug + Clone + PartialEq;
+    type ExtCapacity: Debug + Clone + Default;
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar;
     fn to_scalar_ref<'a>(scalar: &'a Self::Scalar) -> Self::ScalarRef<'a>;
@@ -111,10 +112,25 @@ pub trait ArgType: ValueType {
     }
 
     fn create_builder(capacity: usize, generics: &GenericMap) -> Self::ColumnBuilder;
+    fn create_ext_builder(
+        capacity: (usize, Self::ExtCapacity),
+        generics: &GenericMap,
+    ) -> Self::ColumnBuilder;
     fn column_to_builder(col: Self::Column) -> Self::ColumnBuilder;
     fn builder_len(builder: &Self::ColumnBuilder) -> usize;
     fn push_item(builder: &mut Self::ColumnBuilder, item: Self::ScalarRef<'_>);
     fn push_default(builder: &mut Self::ColumnBuilder);
+    fn push_with_tranform<F, I: ArgType>(
+        _builder: &mut Self::ColumnBuilder,
+        _item: I::ScalarRef<'_>,
+        _func: F,
+    ) -> Result<usize, String>
+    where
+        F: FnMut(I::ScalarRef<'_>, &mut [u8]) -> Result<usize, String>,
+    {
+        unimplemented!()
+    }
+
     fn append_builder(builder: &mut Self::ColumnBuilder, other_builder: &Self::ColumnBuilder);
     fn build_column(builder: Self::ColumnBuilder) -> Self::Column;
     fn build_scalar(builder: Self::ColumnBuilder) -> Self::Scalar;

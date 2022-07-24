@@ -30,6 +30,7 @@ impl ValueType for NullType {
     type ScalarRef<'a> = ();
     type Column = usize;
     type Domain = ();
+    type ExtCapacity = ();
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar
@@ -111,6 +112,13 @@ impl ArgType for NullType {
     }
 
     fn create_builder(_capacity: usize, _generics: &GenericMap) -> Self::ColumnBuilder {
+        0
+    }
+
+    fn create_ext_builder(
+        _capacity: (usize, Self::ExtCapacity),
+        _generics: &GenericMap,
+    ) -> Self::ColumnBuilder {
         0
     }
 

@@ -34,6 +34,7 @@ impl ValueType for StringType {
     type ScalarRef<'a> = &'a [u8];
     type Column = (Buffer<u8>, Buffer<u64>);
     type Domain = StringDomain;
+    type ExtCapacity = usize;
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar.to_vec()
@@ -117,6 +118,17 @@ impl ArgType for StringType {
         StringColumnBuilder::with_capacity(0, capacity)
     }
 
+    fn create_ext_builder(
+        capacity: (usize, Self::ExtCapacity),
+        _: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        println!(
+            "create_ext_builder, offset len:{:?}, data len:{:?}",
+            capacity.0 + 1, capacity.1
+        );
+        StringColumnBuilder::with_capacity(capacity.1, capacity.0 + 1)
+    }
+
     fn column_to_builder((data, offsets): Self::Column) -> Self::ColumnBuilder {
         StringColumnBuilder {
             data: buffer_into_mut(data),
@@ -135,6 +147,17 @@ impl ArgType for StringType {
 
     fn push_default(builder: &mut Self::ColumnBuilder) {
         builder.commit_row();
+    }
+
+    fn push_with_tranform<F, I: ArgType>(
+        builder: &mut Self::ColumnBuilder,
+        item: I::ScalarRef<'_>,
+        mut func: F,
+    ) -> Result<usize, String>
+    where
+        F: FnMut(I::ScalarRef<'_>, &mut [u8]) -> Result<usize, String>,
+    {
+        builder.push_with_tranform::<_, I>(item, |val, buf| func(val, buf))
     }
 
     fn append_builder(builder: &mut Self::ColumnBuilder, other_builder: &Self::ColumnBuilder) {
@@ -210,6 +233,34 @@ impl StringColumnBuilder {
 
     pub fn commit_row(&mut self) {
         self.offsets.push(self.data.len() as u64);
+    }
+
+    fn push_with_tranform<F, I: ArgType>(
+        &mut self,
+        item: I::ScalarRef<'_>,
+        mut func: F,
+    ) -> Result<usize, String>
+    where
+        F: FnMut(I::ScalarRef<'_>, &mut [u8]) -> Result<usize, String>,
+    {
+        let mut offset = self.offsets.last().cloned().unwrap_or_default() as usize;
+        unsafe {
+            let bytes = std::slice::from_raw_parts_mut(
+                self.data.as_mut_ptr().add(offset),
+                self.data.capacity() - offset,
+            );
+
+            match func(item, bytes) {
+                Ok(l) => {
+                    offset += l;
+                    self.offsets.push(offset as u64);
+                    self.data.set_len(offset);
+                    Ok(l)
+                }
+
+                Err(e) => Err(e),
+            }
+        }
     }
 
     pub fn append(&mut self, other: &Self) {

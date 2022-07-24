@@ -36,6 +36,7 @@ impl<T: ValueType> ValueType for NullableType<T> {
     type ScalarRef<'a> = Option<T::ScalarRef<'a>>;
     type Column = (T::Column, Bitmap);
     type Domain = NullableDomain<T>;
+    type ExtCapacity = T::ExtCapacity;
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar.map(T::to_owned_scalar)
@@ -142,6 +143,16 @@ impl<T: ArgType> ArgType for NullableType<T> {
         (
             T::create_builder(capacity, generics),
             MutableBitmap::with_capacity(capacity),
+        )
+    }
+
+    fn create_ext_builder(
+        capacity: (usize, Self::ExtCapacity),
+        generics: &GenericMap,
+    ) -> Self::ColumnBuilder {
+        (
+            T::create_ext_builder((capacity.0, capacity.1), generics),
+            MutableBitmap::with_capacity(capacity.0),
         )
     }
 

@@ -324,6 +324,69 @@ impl FunctionRegistry {
             }));
     }
 
+    pub fn register_with_wise_writer_1_arg<I1: ArgType, O: ArgType, F, G, H, J>(
+        &mut self,
+        name: &'static str,
+        property: FunctionProperty,
+        calc_domain: F,
+        func: G,
+        estimate_scalar_capacity_fn: H,
+        estimate_column_capacity_fn: J,
+    ) where
+        F: Fn(&I1::Domain) -> Option<O::Domain> + 'static + Clone + Copy,
+        G: Fn(I1::ScalarRef<'_>, &mut [u8]) -> Result<usize, String> + 'static + Clone + Copy,
+        H: Fn(I1::ScalarRef<'_>) -> O::ExtCapacity + 'static + Copy + Clone,
+        J: Fn(&I1::Column) -> O::ExtCapacity + 'static + Copy + Clone,
+    {
+        let has_nullable = &[I1::data_type(), O::data_type()]
+            .iter()
+            .any(|ty| ty.as_nullable().is_some() || ty.is_null());
+
+        assert!(
+            !has_nullable,
+            "Function {} has nullable argument or output, please use register_1_arg_core instead",
+            name
+        );
+
+        self.register_1_arg_core::<NullType, NullType, _, _>(
+            name,
+            property.clone(),
+            |_| None,
+            vectorize_1_arg::<NullType, NullType>(|_| ()),
+        );
+
+        self.register_1_arg_core::<I1, O, _, _>(
+            name,
+            property.clone(),
+            calc_domain,
+            vectorize_with_customer_writer_1_arg(
+                func,
+                estimate_scalar_capacity_fn,
+                estimate_column_capacity_fn,
+            ),
+        );
+
+        self.register_1_arg_core::<NullableType<I1>, NullableType<O>, _, _>(
+            name,
+            property,
+            move |arg1| {
+                let value = match &arg1.value {
+                    Some(value) => Some(calc_domain(value)?),
+                    None => None,
+                };
+                Some(NullableDomain {
+                    has_null: arg1.has_null,
+                    value: value.map(Box::new),
+                })
+            },
+            vectorize_with_customer_writer_passthrough_nullable_1_arg(
+                func,
+                estimate_scalar_capacity_fn,
+                estimate_column_capacity_fn,
+            ),
+        );
+    }
+
     pub fn register_2_arg<I1: ArgType, I2: ArgType, O: ArgType, F, G>(
         &mut self,
         name: &'static str,
@@ -589,6 +652,31 @@ pub fn vectorize_with_writer_1_arg<I1: ArgType, O: ArgType>(
     }
 }
 
+pub fn vectorize_with_customer_writer_1_arg<I1: ArgType, O: ArgType>(
+    func: impl Fn(I1::ScalarRef<'_>, &mut [u8]) -> Result<usize, String> + Copy,
+    estimate_scalar_capacity_fn: impl Fn(I1::ScalarRef<'_>) -> O::ExtCapacity + 'static + Copy + Clone,
+    estimate_column_capacity_fn: impl Fn(&I1::Column) -> O::ExtCapacity + 'static + Copy + Clone,
+) -> impl Fn(ValueRef<I1>, &GenericMap) -> Result<Value<O>, String> + Copy {
+    move |arg1, generics| match arg1 {
+        ValueRef::Scalar(val) => {
+            let estimate_capacity = estimate_scalar_capacity_fn(val.clone());
+            let mut builder = O::create_ext_builder((1, estimate_capacity), generics);
+            O::push_with_tranform::<_, I1>(&mut builder, val, |val, buf| func(val, buf))?;
+            Ok(Value::Scalar(O::build_scalar(builder)))
+        }
+        ValueRef::Column(col) => {
+            let estimate_capacity = estimate_column_capacity_fn(&col);
+            let iter = I1::iter_column(&col);
+            let mut builder =
+                O::create_ext_builder((iter.size_hint().0, estimate_capacity), generics);
+            for val in I1::iter_column(&col) {
+                O::push_with_tranform::<_, I1>(&mut builder, val, |val, buf| func(val, buf))?;
+            }
+            Ok(Value::Column(O::build_column(builder)))
+        }
+    }
+}
+
 pub fn vectorize_passthrough_nullable_1_arg<I1: ArgType, O: ArgType>(
     func: impl Fn(I1::ScalarRef<'_>) -> O::Scalar + Copy,
 ) -> impl Fn(ValueRef<NullableType<I1>>, &GenericMap) -> Result<Value<NullableType<O>>, String> + Copy
@@ -620,6 +708,33 @@ pub fn vectorize_with_writer_passthrough_nullable_1_arg<I1: ArgType, O: ArgType>
             let mut builder = O::create_builder(iter.size_hint().0, generics);
             for val in I1::iter_column(&col) {
                 func(val, &mut builder)?;
+            }
+            Ok(Value::Column((O::build_column(builder), validity)))
+        }
+    }
+}
+
+pub fn vectorize_with_customer_writer_passthrough_nullable_1_arg<I1: ArgType, O: ArgType>(
+    func: impl Fn(I1::ScalarRef<'_>, &mut [u8]) -> Result<usize, String> + Copy,
+    estimate_scalar_capacity_fn: impl Fn(I1::ScalarRef<'_>) -> O::ExtCapacity + 'static + Copy + Clone,
+    estimate_column_capacity_fn: impl Fn(&I1::Column) -> O::ExtCapacity + 'static + Copy + Clone,
+) -> impl Fn(ValueRef<NullableType<I1>>, &GenericMap) -> Result<Value<NullableType<O>>, String> + Copy
+{
+    move |arg1, generics| match arg1 {
+        ValueRef::Scalar(None) => Ok(Value::Scalar(None)),
+        ValueRef::Scalar(Some(val)) => {
+            let estimate_capacity = estimate_scalar_capacity_fn(val.clone());
+            let mut builder = O::create_ext_builder((1, estimate_capacity), generics);
+            O::push_with_tranform::<_, I1>(&mut builder, val, |val, buf| func(val, buf))?;
+            Ok(Value::Scalar(Some(O::build_scalar(builder))))
+        }
+        ValueRef::Column((col, validity)) => {
+            let estimate_capacity = estimate_column_capacity_fn(&col);
+            let iter = I1::iter_column(&col);
+            let mut builder =
+                O::create_ext_builder((iter.size_hint().0, estimate_capacity), generics);
+            for val in I1::iter_column(&col) {
+                O::push_with_tranform::<_, I1>(&mut builder, val, |val, buf| func(val, buf))?;
             }
             Ok(Value::Column((O::build_column(builder), validity)))
         }

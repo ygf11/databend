@@ -24,6 +24,7 @@ impl ValueType for AnyType {
     type ScalarRef<'a> = &'a Scalar;
     type Column = Column;
     type Domain = Domain;
+    type ExtCapacity = usize;
 
     fn to_owned_scalar<'a>(scalar: Self::ScalarRef<'a>) -> Self::Scalar {
         scalar.clone()
